@@ -2,18 +2,22 @@
 (in-package "SYMBOLIC-LP")
 
 (defstruct (constraint (:copier nil)
-                       (:constructor %make-constraint (left-side relation right-side))
+                       (:constructor %make-constraint (left-side relation right-side &optional tag))
                        (:predicate constraintp))
   (left-side +zero+ :type linear-sum :read-only t)
   (relation '= :type (member <= = >=) :read-only t)
-  (right-side 0d0d0 :type coefficient :read-only t))
+  (right-side 0d0d0 :type coefficient :read-only t)
+  (tag nil :read-only t))
 
 (defmethod print-object ((object constraint) stream)
   (print-unreadable-object (object stream :type t)
     (render-sum (constraint-left-side object) :stream stream)
-    (format stream " ~A ~F" (constraint-relation object) (constraint-right-side object))))
+    (format stream " ~A ~F~@[ ~S~]" 
+            (constraint-relation object) 
+            (constraint-right-side object)
+            (constraint-tag object))))
 
-(defun make-constraint (left relation right)
+(defun make-constraint (left relation right &optional tag)
   (let ((left* ($- left right)))
     (multiple-value-bind (left** right**)
         (let ((next (next-term left*)))
@@ -21,11 +25,11 @@
             ((null next) (values left* 0.0d0))
             ((constant-term-p left*) (values next (- (term-coefficient left*))))
             (t (values left* 0.0d0))))
-      (%make-constraint left** relation right**))))
+      (%make-constraint left** relation right** tag))))
     
-(defun $<= (lhs rhs) (make-constraint lhs '<= rhs))
-(defun $= (lhs rhs) (make-constraint lhs '= rhs))
-(defun $>= (lhs rhs) (make-constraint lhs '>= rhs))
+(defun $<= (lhs rhs &optional tag) (make-constraint lhs '<= rhs tag))
+(defun $= (lhs rhs &optional tag) (make-constraint lhs '= rhs tag))
+(defun $>= (lhs rhs &optional tag) (make-constraint lhs '>= rhs tag))
   
 
 (defmacro with-variable-generators (((&rest bindings) &key key) &body body)
